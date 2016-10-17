@@ -78,6 +78,7 @@ struct mosq_config {
 	char **filter_outs; /* sub */
 	int filter_out_count; /* sub */
 	bool verbose; /* sub */
+	bool hex_dump; /* sub */
 	bool eol; /* sub */
 	int msg_count; /* sub */
 #ifdef WITH_SOCKS

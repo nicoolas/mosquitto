@@ -33,6 +33,35 @@ Contributors:
 bool process_messages = true;
 int msg_count = 0;
 
+static void _message_dump(const struct mosq_config *cfg, const struct mosquitto_message *message)
+{
+	if(cfg->verbose) printf("%s ", message->topic);
+	if(message->payloadlen){
+		if (cfg->hex_dump){
+			int i;
+			for (i=0; i<message->payloadlen; i++){
+				if (i%0x10 == 0){
+					printf ("\n%08x ", i);
+				}
+				else {
+					printf("-");
+				}
+				printf("%02x", ((unsigned char*)message->payload)[i]);
+			}
+		}
+		else {
+			fwrite(message->payload, 1, message->payloadlen, stdout);
+		}
+	}
+	else {
+		printf("(null)");
+	}
+	if(cfg->eol){
+		printf("\n");
+	}
+	fflush(stdout);
+}
+
 void my_message_callback(struct mosquitto *mosq, void *obj, const struct mosquitto_message *message)
 {
 	struct mosq_config *cfg;
@@ -52,28 +81,7 @@ void my_message_callback(struct mosquitto *mosq, void *obj, const struct mosquit
 		}
 	}
 
-	if(cfg->verbose){
-		if(message->payloadlen){
-			printf("%s ", message->topic);
-			fwrite(message->payload, 1, message->payloadlen, stdout);
-			if(cfg->eol){
-				printf("\n");
-			}
-		}else{
-			if(cfg->eol){
-				printf("%s (null)\n", message->topic);
-			}
-		}
-		fflush(stdout);
-	}else{
-		if(message->payloadlen){
-			fwrite(message->payload, 1, message->payloadlen, stdout);
-			if(cfg->eol){
-				printf("\n");
-			}
-			fflush(stdout);
-		}
-	}
+	_message_dump(cfg, message);
 	if(cfg->msg_count>0){
 		msg_count++;
 		if(cfg->msg_count == msg_count){
@@ -129,7 +137,7 @@ void print_usage(void)
 	mosquitto_lib_version(&major, &minor, &revision);
 	printf("mosquitto_sub is a simple mqtt client that will subscribe to a single topic and print all messages it receives.\n");
 	printf("mosquitto_sub version %s running on libmosquitto %d.%d.%d.\n\n", VERSION, major, minor, revision);
-	printf("Usage: mosquitto_sub [-c] [-h host] [-k keepalive] [-p port] [-q qos] [-R] -t topic ...\n");
+	printf("Usage: mosquitto_sub [-c] [-h host] [-k keepalive] [-p port] [-q qos] [-R] [-x] -t topic ...\n");
 	printf("                     [-C msg_count] [-T filter_out]\n");
 #ifdef WITH_SRV
 	printf("                     [-A bind_address] [-S]\n");
@@ -173,6 +181,7 @@ void print_usage(void)
 	printf(" -T : topic string to filter out of results. May be repeated.\n");
 	printf(" -u : provide a username (requires MQTT 3.1 broker)\n");
 	printf(" -v : print published messages verbosely.\n");
+	printf(" -x : print hex representation of published messages.\n");
 	printf(" -V : specify the version of the MQTT protocol to use when connecting.\n");
 	printf("      Can be mqttv31 or mqttv311. Defaults to mqttv31.\n");
 	printf(" --help : display this message.\n");
